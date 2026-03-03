@@ -1,0 +1,5 @@
+{
+  "path": "$HOME/iri-demo/input.txt",
+  "owner": "$USER",
+  "group": "<replace-with-group>"
+}

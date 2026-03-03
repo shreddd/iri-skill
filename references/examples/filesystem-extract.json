@@ -1,0 +1,5 @@
+{
+  "path": "$HOME/iri-demo.tar.gz",
+  "target_path": "$HOME/iri-demo-extracted",
+  "compression": "gzip"
+}
