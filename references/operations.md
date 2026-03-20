@@ -12,8 +12,8 @@ Columns:
 |---|---|---|---|---|---|
 | getCapabilities | GET | `/api/v1/account/capabilities` | public |  |  |
 | getCapability | GET | `/api/v1/account/capabilities/{capability_id}` | public | capability_id |  |
-| getEventByIncident | GET | `/api/v1/status/incidents/{incident_id}/events/{event_id}` | public | incident_id,event_id |  |
-| getEventsByIncident | GET | `/api/v1/status/incidents/{incident_id}/events` | public | incident_id |  |
+| getEventByIncident | GET | `/api/v1/status/events/{event_id}` | public | event_id |  |
+| getEventsByIncident | GET | `/api/v1/status/events` | public |  |  |
 | getFacility | GET | `/api/v1/facility` | public |  |  |
 | getIncident | GET | `/api/v1/status/incidents/{incident_id}` | public | incident_id |  |
 | getIncidents | GET | `/api/v1/status/incidents` | public |  |  |

@@ -19,6 +19,11 @@ python3 scripts/token_manager.py status --json
 python3 scripts/token_manager.py ensure --min-ttl 300
 ```
 
+If the IRI API still returns `401`, force a fresh identity-provider login:
+```bash
+python3 scripts/token_manager.py ensure --force-login --prompt-login --validate-iri
+```
+
 3. List available operations from OpenAPI:
 ```bash
 python3 scripts/iri_api_call.py list-operations
@@ -48,6 +53,21 @@ python3 scripts/token_manager.py ensure --min-ttl 300
 python3 scripts/token_manager.py ensure --force-login
 ```
 
+- Force a fresh IdP login prompt when server-side session state is bad:
+```bash
+python3 scripts/token_manager.py ensure --force-login --prompt-login
+```
+
+- Refresh saved tokens only, without opening a browser:
+```bash
+python3 scripts/token_manager.py ensure --refresh-only
+```
+
+- Validate the IRI bearer token against the API:
+```bash
+python3 scripts/token_manager.py ensure --validate-iri
+```
+
 - Emit machine-readable token metadata:
 ```bash
 python3 scripts/token_manager.py ensure --json
@@ -55,8 +75,11 @@ python3 scripts/token_manager.py ensure --json
 
 Notes:
 - Default token file: `~/.globus/auth_tokens.json`
+- The saved file preserves the full Globus token response, including `other_tokens`.
+- The usable IRI API bearer token is extracted from `other_tokens`, not the top-level Globus Auth token.
 - Required scopes are enforced by script validation.
 - `globus-sdk` is required for refresh/login operations.
+- If validation reports empty `session_info.authentications`, re-run with `--force-login --prompt-login` and complete the flow in a Chrome incognito window.
 
 ## Endpoint Execution
 

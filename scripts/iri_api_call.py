@@ -13,7 +13,7 @@ import urllib.parse
 import urllib.request
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 DEFAULT_BASE_URL = "https://api.iri.nersc.gov"
 
@@ -30,13 +30,13 @@ def default_token_file() -> Path:
     return Path.home() / ".globus" / "auth_tokens.json"
 
 
-def load_openapi(path: Path) -> dict[str, Any]:
+def load_openapi(path: Path) -> Dict[str, Any]:
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def parse_kv(values: list[str] | None) -> dict[str, str]:
-    out: dict[str, str] = {}
+def parse_kv(values: Optional[List[str]]) -> Dict[str, str]:
+    out = {}  # type: Dict[str, str]
     for item in values or []:
         if "=" not in item:
             raise UsageError(f"Expected key=value, got: {item}")
@@ -46,8 +46,11 @@ def parse_kv(values: list[str] | None) -> dict[str, str]:
 
 
 def find_operation(
-    spec: dict[str, Any], operation_id: str | None, method: str | None, path: str | None
-) -> tuple[str, str, dict[str, Any]]:
+    spec: Dict[str, Any],
+    operation_id: Optional[str],
+    method: Optional[str],
+    path: Optional[str],
+) -> Tuple[str, str, Dict[str, Any]]:
     if operation_id:
         for api_path, methods in spec.get("paths", {}).items():
             for method_name, operation in methods.items():
@@ -69,7 +72,7 @@ def find_operation(
     return method.upper(), path, operation
 
 
-def resolve_path(template: str, path_params: dict[str, str]) -> str:
+def resolve_path(template: str, path_params: Dict[str, str]) -> str:
     names = set(re.findall(r"\{([^{}]+)\}", template))
     missing = sorted(n for n in names if n not in path_params)
     if missing:
@@ -81,11 +84,26 @@ def resolve_path(template: str, path_params: dict[str, str]) -> str:
     return resolved
 
 
-def load_saved_token(token_file: Path) -> dict[str, Any] | None:
+def load_saved_token(token_file: Path) -> Optional[Dict[str, Any]]:
     if not token_file.exists():
         return None
     with token_file.open("r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def parse_scope_string(scope_string: str) -> Set[str]:
+    return set(scope_string.split()) if scope_string else set()
+
+
+def extract_iri_token(saved: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    iri_scope = (
+        "https://auth.globus.org/scopes/"
+        "ed3e577d-f7f3-4639-b96e-ff5a8445d699/iri_api"
+    )
+    for token_data in saved.get("other_tokens", []):
+        if iri_scope in parse_scope_string(token_data.get("scope", "")):
+            return token_data
+    return None
 
 
 def ensure_access_token(token_file: Path, min_ttl: int, script_dir: Path) -> str:
@@ -113,9 +131,10 @@ def get_access_token(
 ) -> str:
     saved = load_saved_token(token_file)
     if saved:
-        expires_at = int(saved.get("expires_at_seconds", 0) or 0)
+        iri_token = extract_iri_token(saved)
+        expires_at = int((iri_token or {}).get("expires_at_seconds", 0) or 0)
         ttl = expires_at - int(time.time()) if expires_at else -1
-        token = saved.get("access_token")
+        token = (iri_token or {}).get("access_token")
         if token and ttl >= min_ttl:
             return token
 
@@ -127,12 +146,12 @@ def get_access_token(
     )
 
 
-def encode_multipart(field_name: str, file_path: Path) -> tuple[bytes, str]:
+def encode_multipart(field_name: str, file_path: Path) -> Tuple[bytes, str]:
     boundary = f"----iri-api-{uuid.uuid4().hex}"
     mime_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
     file_bytes = file_path.read_bytes()
 
-    parts: list[bytes] = []
+    parts = []  # type: List[bytes]
     parts.append(f"--{boundary}\r\n".encode("utf-8"))
     parts.append(
         (
@@ -178,7 +197,7 @@ def call_api(args: argparse.Namespace) -> int:
         )
         headers["Authorization"] = f"Bearer {token}"
 
-    data: bytes | None = None
+    data = None  # type: Optional[bytes]
     if args.upload_file:
         data, ctype = encode_multipart(args.upload_field, args.upload_file)
         headers["Content-Type"] = ctype
@@ -234,7 +253,7 @@ def call_api(args: argparse.Namespace) -> int:
 
 def list_ops(args: argparse.Namespace) -> int:
     spec = load_openapi(args.openapi)
-    rows: list[tuple[str, str, str, bool]] = []
+    rows = []  # type: List[Tuple[str, str, str, bool]]
     for api_path, methods in spec.get("paths", {}).items():
         for method_name, operation in methods.items():
             op_id = operation.get("operationId", "")
