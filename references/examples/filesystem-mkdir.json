@@ -1,4 +1,4 @@
 {
-  "path": "$HOME/iri-demo/newdir",
+  "path": "/global/homes/<first-letter>/<username>/iri-demo/newdir",
   "parent": true
 }

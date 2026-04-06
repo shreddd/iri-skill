@@ -176,7 +176,7 @@ def call_api(args: argparse.Namespace) -> int:
     query_params = parse_kv(args.query)
     resolved_path = resolve_path(openapi_path, path_params)
 
-    query_string = urllib.parse.urlencode(query_params)
+    query_string = urllib.parse.urlencode(query_params, quote_via=urllib.parse.quote, safe="/")
     url = f"{args.base_url.rstrip('/')}{resolved_path}"
     if query_string:
         url = f"{url}?{query_string}"

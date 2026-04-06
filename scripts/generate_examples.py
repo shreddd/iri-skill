@@ -20,9 +20,9 @@ def main() -> int:
             "name": "iri-sample-job",
             "executable": "/bin/hostname",
             "arguments": [],
-            "directory": "$HOME",
-            "stdout_path": "$HOME/iri-job.out",
-            "stderr_path": "$HOME/iri-job.err",
+            "directory": "/global/homes/<first-letter>/<username>",
+            "stdout_path": "/global/homes/<first-letter>/<username>/iri-job.out",
+            "stderr_path": "/global/homes/<first-letter>/<username>/iri-job.err",
             "launcher": "srun",
             "resources": {
                 "node_count": 1,
@@ -46,37 +46,37 @@ def main() -> int:
             ]
         },
         "filesystem-mkdir.json": {
-            "path": "$HOME/iri-demo/newdir",
+            "path": "/global/homes/<first-letter>/<username>/iri-demo/newdir",
             "parent": True
         },
         "filesystem-mv.json": {
-            "path": "$HOME/iri-demo/input.txt",
-            "target_path": "$HOME/iri-demo/input.renamed.txt"
+            "path": "/global/homes/<first-letter>/<username>/iri-demo/input.txt",
+            "target_path": "/global/homes/<first-letter>/<username>/iri-demo/input.renamed.txt"
         },
         "filesystem-cp.json": {
-            "path": "$HOME/iri-demo/input.txt",
-            "target_path": "$HOME/iri-demo/input.copy.txt",
+            "path": "/global/homes/<first-letter>/<username>/iri-demo/input.txt",
+            "target_path": "/global/homes/<first-letter>/<username>/iri-demo/input.copy.txt",
             "dereference": False
         },
         "filesystem-compress.json": {
-            "path": "$HOME/iri-demo",
-            "target_path": "$HOME/iri-demo.tar.gz",
+            "path": "/global/homes/<first-letter>/<username>/iri-demo",
+            "target_path": "/global/homes/<first-letter>/<username>/iri-demo.tar.gz",
             "match_pattern": ".*",
             "dereference": False,
             "compression": "gzip"
         },
         "filesystem-extract.json": {
-            "path": "$HOME/iri-demo.tar.gz",
-            "target_path": "$HOME/iri-demo-extracted",
+            "path": "/global/homes/<first-letter>/<username>/iri-demo.tar.gz",
+            "target_path": "/global/homes/<first-letter>/<username>/iri-demo-extracted",
             "compression": "gzip"
         },
         "filesystem-chmod.json": {
-            "path": "$HOME/iri-demo/input.txt",
+            "path": "/global/homes/<first-letter>/<username>/iri-demo/input.txt",
             "mode": "640"
         },
         "filesystem-chown.json": {
-            "path": "$HOME/iri-demo/input.txt",
-            "owner": "$USER",
+            "path": "/global/homes/<first-letter>/<username>/iri-demo/input.txt",
+            "owner": "<username>",
             "group": "<replace-with-group>"
         }
     }
