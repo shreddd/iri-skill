@@ -2,9 +2,9 @@
   "name": "iri-sample-job",
   "executable": "/bin/hostname",
   "arguments": [],
-  "directory": "$HOME",
-  "stdout_path": "$HOME/iri-job.out",
-  "stderr_path": "$HOME/iri-job.err",
+  "directory": "/global/homes/<first-letter>/<username>",
+  "stdout_path": "/global/homes/<first-letter>/<username>/iri-job.out",
+  "stderr_path": "/global/homes/<first-letter>/<username>/iri-job.err",
   "launcher": "srun",
   "resources": {
     "node_count": 1,

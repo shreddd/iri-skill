@@ -1,4 +1,4 @@
 {
-  "path": "$HOME/iri-demo/input.txt",
+  "path": "/global/homes/<first-letter>/<username>/iri-demo/input.txt",
   "mode": "640"
 }

@@ -1,5 +1,5 @@
 {
-  "path": "$HOME/iri-demo/input.txt",
-  "owner": "$USER",
+  "path": "/global/homes/<first-letter>/<username>/iri-demo/input.txt",
+  "owner": "<username>",
   "group": "<replace-with-group>"
 }

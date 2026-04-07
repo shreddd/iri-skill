@@ -141,25 +141,39 @@ python3 scripts/iri_api_call.py call \
 ```
 
 - Filesystem list/view:
+
+  Use the storage resource name that matches the path prefix — **not** `perlmutter`:
+
+  | Path prefix | `resource_id` to use |
+  |---|---|
+  | `/global/homes/` or `/global/u1/` | `homes` |
+  | `/pscratch/` | `scratch` |
+  | `/global/cfs/` | `cfs` |
+  | `/global/common/` | `common` |
+
 ```bash
+RESOURCE=<homes|scratch|cfs|common>   # pick based on path prefix above
+
 python3 scripts/iri_api_call.py call \
   --operation-id ls \
-  --path-param resource_id=perlmutter \
-  --query path=/global/cfs/cdirs \
+  --path-param resource_id=$RESOURCE \
+  --query path=/path/to/directory \
   --ensure-token
 
 python3 scripts/iri_api_call.py call \
   --operation-id view \
-  --path-param resource_id=perlmutter \
+  --path-param resource_id=$RESOURCE \
   --query path=/path/to/file.txt \
   --ensure-token
 ```
 
 - Upload file:
 ```bash
+RESOURCE=<homes|scratch|cfs|common>   # pick based on destination path prefix
+
 python3 scripts/iri_api_call.py call \
   --operation-id upload \
-  --path-param resource_id=perlmutter \
+  --path-param resource_id=$RESOURCE \
   --query path=/path/on/resource/target.dat \
   --upload-file /local/path/source.dat \
   --ensure-token
@@ -170,6 +184,14 @@ python3 scripts/iri_api_call.py call \
 python3 scripts/iri_api_call.py call --operation-id getTasks --ensure-token
 python3 scripts/iri_api_call.py call --operation-id getTask --path-param task_id=<task_id> --ensure-token
 ```
+
+## Path Rules for Job and Filesystem Specs
+
+**Never use shell variables (`$HOME`, `$SCRATCH`, `$USER`) in job or filesystem JSON bodies.** The IRI API passes these values as literal strings — they are not expanded by the shell or by Slurm. Use absolute paths instead.
+
+Perlmutter home directories follow the pattern `/global/homes/<first-letter>/<username>` (e.g. `/global/homes/s/shreyas`). Scratch is at `/pscratch/sd/<first-letter>/<username>`.
+
+Always substitute real paths before submitting. The example templates use `<first-letter>/<username>` placeholders — replace them with actual values.
 
 ## Parameter and Body Rules
 
@@ -220,7 +242,7 @@ python3 scripts/iri_api_call.py call \
 
 python3 scripts/iri_api_call.py call \
   --operation-id mkdir \
-  --path-param resource_id=perlmutter \
+  --path-param resource_id=$RESOURCE \
   --json-file references/examples/filesystem-mkdir.json \
   --ensure-token
 ```
