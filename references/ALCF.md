@@ -10,17 +10,17 @@ Use the unified token manager and scope it to ALCF:
 
 ```bash
 # First-time login or refresh as needed:
-python3 scripts/token_manager.py --facilities alcf ensure --min-ttl 300
+python3 scripts/token_manager.py ensure --facilities alcf --min-ttl 300
 
 # Validate the ALCF token against the ALCF API:
 python3 scripts/token_manager.py \
-  --facilities alcf \
   ensure \
+  --facilities alcf \
   --validate-iri \
   --validate-facility alcf
 
 # Print the current ALCF access token if you explicitly need it:
-python3 scripts/token_manager.py --facilities alcf ensure --print-token
+python3 scripts/token_manager.py ensure --facilities alcf --print-token
 ```
 
 Default token file: `~/.globus/auth_tokens.json`

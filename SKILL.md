@@ -11,8 +11,8 @@ Use scripted workflows. Prefer the bundled scripts over hand-written `curl` comm
 
 | Site | Base URL | Auth script | Reference |
 |---|---|---|---|
-| NERSC (Perlmutter) | `https://api.iri.nersc.gov` (default) | `scripts/token_manager.py --facilities nersc` | `references/NERSC.md` |
-| ALCF (Polaris) | `https://api.alcf.anl.gov` | `scripts/token_manager.py --facilities alcf` | `references/ALCF.md` |
+| NERSC (Perlmutter) | `https://api.iri.nersc.gov` (default) | `scripts/token_manager.py ensure --facilities nersc` | `references/NERSC.md` |
+| ALCF (Polaris) | `https://api.alcf.anl.gov` | `scripts/token_manager.py ensure --facilities alcf` | `references/ALCF.md` |
 
 **Before doing any work**, read the reference file for the relevant site. Do not proceed from memory.
 
@@ -25,33 +25,33 @@ All `iri_api_call.py` commands accept `--facility` to select the deployment, and
 - Check token state:
 ```bash
 python3 scripts/token_manager.py status --json
-python3 scripts/token_manager.py --facilities nersc status --json
-python3 scripts/token_manager.py --facilities alcf status --json
+python3 scripts/token_manager.py status --facilities nersc --json
+python3 scripts/token_manager.py status --facilities alcf --json
 ```
 
 - Ensure usable tokens:
 ```bash
 python3 scripts/token_manager.py ensure --min-ttl 300
-python3 scripts/token_manager.py --facilities nersc ensure --min-ttl 300
-python3 scripts/token_manager.py --facilities alcf ensure --min-ttl 300
+python3 scripts/token_manager.py ensure --facilities nersc --min-ttl 300
+python3 scripts/token_manager.py ensure --facilities alcf --min-ttl 300
 ```
 
 - Refresh or login for selected facilities only:
 ```bash
-python3 scripts/token_manager.py --facilities nersc ensure --refresh-only
-python3 scripts/token_manager.py --facilities alcf ensure --refresh-only
+python3 scripts/token_manager.py ensure --facilities nersc --refresh-only
+python3 scripts/token_manager.py ensure --facilities alcf --refresh-only
 ```
 
 - Validate the facility token against the matching API:
 ```bash
-python3 scripts/token_manager.py --facilities nersc ensure --validate-iri --validate-facility nersc
-python3 scripts/token_manager.py --facilities alcf ensure --validate-iri --validate-facility alcf
+python3 scripts/token_manager.py ensure --facilities nersc --validate-iri --validate-facility nersc
+python3 scripts/token_manager.py ensure --facilities alcf --validate-iri --validate-facility alcf
 ```
 
 - Print selected facility access tokens:
 ```bash
 python3 scripts/token_manager.py ensure --print-token
-python3 scripts/token_manager.py --facilities alcf ensure --print-token
+python3 scripts/token_manager.py ensure --facilities alcf --print-token
 ```
 
 ## Shared Parameter Rules
