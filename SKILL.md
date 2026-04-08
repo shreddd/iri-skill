@@ -31,7 +31,38 @@ python3 scripts/iri_api_call.py call --facility nersc --operation-id getProjects
 
 `--base-url` and `--openapi-url` follow the same rule: they are global flags and must also come before the subcommand.
 
+## Quick Start
+
+1. Check token state:
+```bash
+python3 scripts/token_manager.py status --json
+```
+
+2. Ensure a usable token for authenticated endpoints:
+```bash
+python3 scripts/token_manager.py ensure --min-ttl 300
+```
+
+If the IRI API still returns `401`, force a fresh identity-provider login:
+```bash
+python3 scripts/token_manager.py ensure --force-login --prompt-login --validate-iri
+```
+
+3. List available operations from OpenAPI:
+```bash
+python3 scripts/iri_api_call.py --facility nersc list-operations
+python3 scripts/iri_api_call.py --facility alcf list-operations
+```
+
+4. Call an endpoint by `operationId`:
+```bash
+python3 scripts/iri_api_call.py --facility nersc call --operation-id getResources
+python3 scripts/iri_api_call.py --facility alcf call --operation-id getResources
+```
+
 ## Token Management
+
+Use `scripts/token_manager.py` for all token lifecycle actions.
 
 - Check token state:
 ```bash
@@ -65,6 +96,106 @@ python3 scripts/token_manager.py ensure --print-token
 python3 scripts/token_manager.py ensure --facilities alcf --print-token
 ```
 
+Notes:
+- Default token file: `~/.globus/auth_tokens.json`
+- The saved file preserves the full Globus token response, including `other_tokens`.
+- The usable IRI API bearer token is extracted from `other_tokens`, not the top-level Globus Auth token.
+- Required scopes are enforced by script validation.
+- `globus-sdk` is required for refresh/login operations.
+- If validation reports empty `session_info.authentications`, re-run with `--force-login --prompt-login` and complete the flow in a Chrome incognito window.
+
+## Endpoint Execution
+
+Use `scripts/iri_api_call.py` for all API calls.
+
+### Operation Discovery
+
+- List all operations:
+```bash
+python3 scripts/iri_api_call.py --facility nersc list-operations
+python3 scripts/iri_api_call.py --facility alcf list-operations
+```
+
+- See generated static reference:
+`references/operations.md`
+
+### Public Endpoints (No Token Required)
+
+Examples:
+```bash
+python3 scripts/iri_api_call.py --facility nersc call --operation-id getFacility
+python3 scripts/iri_api_call.py --facility nersc call --operation-id getIncidents
+python3 scripts/iri_api_call.py --facility nersc call --operation-id getResource --path-param resource_id=perlmutter
+```
+
+### Authenticated Endpoints (Token Required)
+
+Use `--ensure-token` so calls auto-refresh/login if needed.
+
+- Account / project context:
+```bash
+python3 scripts/iri_api_call.py --facility nersc call --operation-id getProjects --ensure-token
+python3 scripts/iri_api_call.py --facility alcf call --operation-id getProjects --ensure-token
+```
+
+- Submit compute job (request body from file):
+```bash
+python3 scripts/iri_api_call.py --facility nersc call \
+  --operation-id launchJob \
+  --path-param resource_id=perlmutter \
+  --json-file /path/to/job.json \
+  --ensure-token
+```
+
+- Query one job:
+```bash
+python3 scripts/iri_api_call.py --facility nersc call \
+  --operation-id getJob \
+  --path-param resource_id=perlmutter \
+  --path-param job_id=12345 \
+  --ensure-token
+```
+
+- Cancel job:
+```bash
+python3 scripts/iri_api_call.py --facility nersc call \
+  --operation-id cancelJob \
+  --path-param resource_id=perlmutter \
+  --path-param job_id=12345 \
+  --ensure-token
+```
+
+- Filesystem list/view:
+```bash
+python3 scripts/iri_api_call.py --facility nersc call \
+  --operation-id ls \
+  --path-param resource_id=perlmutter \
+  --query path=/global/cfs/cdirs \
+  --ensure-token
+
+python3 scripts/iri_api_call.py --facility nersc call \
+  --operation-id view \
+  --path-param resource_id=perlmutter \
+  --query path=/path/to/file.txt \
+  --ensure-token
+```
+
+- Upload file:
+```bash
+python3 scripts/iri_api_call.py --facility nersc call \
+  --operation-id upload \
+  --path-param resource_id=perlmutter \
+  --query path=/path/on/resource/target.dat \
+  --upload-file /local/path/source.dat \
+  --ensure-token
+```
+
+- Poll task state:
+```bash
+python3 scripts/iri_api_call.py --facility nersc call --operation-id getTasks --ensure-token
+python3 scripts/iri_api_call.py --facility nersc call --operation-id getTask --path-param task_id=<task_id> --ensure-token
+```
+
 ## Shared Parameter Rules
 
 - Prefer `--operation-id` over manual `--method/--path`.
@@ -92,6 +223,49 @@ Rules for these scripts:
 - Put extra `srun` or `mpiexec` lines, affinity settings, environment setup, and teardown logic in those scripts as plain shell commands.
 - For NERSC-oriented launch structure and Slurm examples, use `https://docs.nersc.gov/jobs/examples/`.
 - For ALCF-oriented launch structure and PBS examples, use `https://docs.alcf.anl.gov/running-jobs/example-job-scripts/#cpu-mpi-openmp-examples`.
+
+## Reproducibility and Reference Refresh
+
+Regenerate endpoint reference after OpenAPI updates:
+
+```bash
+python3 scripts/generate_operation_reference.py \
+  --openapi references/openapi.json \
+  --output references/operations.md
+```
+
+Regenerate request payload templates:
+
+```bash
+python3 scripts/generate_examples.py
+```
+
+Use templates from `references/examples/`:
+- `compute-launch-job.json`
+- `compute-status-filters.json`
+- `filesystem-mkdir.json`
+- `filesystem-mv.json`
+- `filesystem-cp.json`
+- `filesystem-compress.json`
+- `filesystem-extract.json`
+- `filesystem-chmod.json`
+- `filesystem-chown.json`
+
+Example calls using generated templates:
+
+```bash
+python3 scripts/iri_api_call.py --facility nersc call \
+  --operation-id launchJob \
+  --path-param resource_id=perlmutter \
+  --json-file references/examples/compute-launch-job.json \
+  --ensure-token
+
+python3 scripts/iri_api_call.py --facility nersc call \
+  --operation-id mkdir \
+  --path-param resource_id=perlmutter \
+  --json-file references/examples/filesystem-mkdir.json \
+  --ensure-token
+```
 
 ## Useful Endpoint Groups
 
