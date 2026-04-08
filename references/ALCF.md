@@ -2,33 +2,36 @@
 
 **Base URL:** `https://api.alcf.anl.gov`
 
-ALCF uses a separate Globus auth flow and UUID-based resource IDs. Aurora compute is not yet implemented in the ALCF IRI API — use **Polaris** for job submission.
+ALCF uses a facility-specific Globus scope and UUID-based resource IDs. Aurora compute is not yet implemented in the ALCF IRI API, so use **Polaris** for job submission.
 
 ## Authentication
 
-ALCF uses a different Globus client and scope than NERSC. Use `scripts/alcf_token_manager.py`:
+Use the unified token manager and scope it to ALCF:
 
 ```bash
-# First-time login (interactive — must run in a real terminal):
-python3 scripts/alcf_token_manager.py authenticate
+# First-time login or refresh as needed:
+python3 scripts/token_manager.py --facilities alcf ensure --min-ttl 300
 
-# Get current access token (reuses/refreshes stored tokens):
-python3 scripts/alcf_token_manager.py get_access_token
+# Validate the ALCF token against the ALCF API:
+python3 scripts/token_manager.py \
+  --facilities alcf \
+  ensure \
+  --validate-iri \
+  --validate-facility alcf
 
-# Check time remaining:
-python3 scripts/alcf_token_manager.py get_time_until_token_expiration --units minutes
+# Print the current ALCF access token if you explicitly need it:
+python3 scripts/token_manager.py --facilities alcf ensure --print-token
 ```
 
-Token file: `~/.globus/app/8b84fc2d-49e9-49ea-b54d-b3a29a70cf31/alcf_facility_api_app/tokens.json`
+Default token file: `~/.globus/auth_tokens.json`
 
-Pass the token to `iri_api_call.py` via `--bearer-token` (ALCF token format is incompatible with `--token-file`):
+Use `iri_api_call.py --facility alcf` so the API server and the ALCF token stay aligned:
 
 ```bash
-TOKEN=$(python3 scripts/alcf_token_manager.py get_access_token)
 python3 scripts/iri_api_call.py call \
-  --base-url https://api.alcf.anl.gov \
+  --facility alcf \
   --operation-id <operationId> \
-  --bearer-token "$TOKEN"
+  --ensure-token
 ```
 
 ## Resource IDs
@@ -74,9 +77,9 @@ Polaris uses PBS. Set `attributes.custom_attributes.filesystems` to declare whic
   "name": "my-job",
   "executable": "/bin/bash",
   "arguments": ["-c", "echo hello from $(hostname)"],
-  "directory": "/home/shreyas",
-  "stdout_path": "/home/shreyas/out.txt",
-  "stderr_path": "/home/shreyas/err.txt",
+  "directory": "/home/username",
+  "stdout_path": "/home/username/out.txt",
+  "stderr_path": "/home/username/err.txt",
   "resources": {
     "node_count": 1
   },
@@ -94,76 +97,74 @@ Polaris uses PBS. Set `attributes.custom_attributes.filesystems` to declare whic
 Submit a job:
 
 ```bash
-TOKEN=$(python3 scripts/alcf_token_manager.py get_access_token)
-
 python3 scripts/iri_api_call.py call \
-  --base-url https://api.alcf.anl.gov \
+  --facility alcf \
   --operation-id launchJob \
   --path-param resource_id=55c1c993-1124-47f9-b823-514ba3849a9a \
   --json-file polaris-job.json \
-  --bearer-token "$TOKEN"
+  --ensure-token
 ```
 
 Check a job:
 
 ```bash
 python3 scripts/iri_api_call.py call \
-  --base-url https://api.alcf.anl.gov \
+  --facility alcf \
   --operation-id getJob \
   --path-param resource_id=55c1c993-1124-47f9-b823-514ba3849a9a \
   --path-param job_id=<job_id> \
-  --bearer-token "$TOKEN"
+  --ensure-token
 ```
 
 List your jobs:
 
 ```bash
 python3 scripts/iri_api_call.py call \
-  --base-url https://api.alcf.anl.gov \
+  --facility alcf \
   --operation-id getJobs \
   --path-param resource_id=55c1c993-1124-47f9-b823-514ba3849a9a \
   --json-body '{}' \
-  --bearer-token "$TOKEN"
+  --ensure-token
 ```
 
 Cancel a job:
 
 ```bash
 python3 scripts/iri_api_call.py call \
-  --base-url https://api.alcf.anl.gov \
+  --facility alcf \
   --operation-id cancelJob \
   --path-param resource_id=55c1c993-1124-47f9-b823-514ba3849a9a \
   --path-param job_id=<job_id> \
-  --bearer-token "$TOKEN"
+  --ensure-token
 ```
+
+If the user wants a multistep Polaris job, additional PBS behavior beyond the supported `attributes`, or affinity/binding control, put that logic in `pre_launch` or `post_launch` scripts. Do not include `#PBS` directives in those scripts, because the API server generates the batch script wrapper.
 
 ## Filesystem Operations
 
-Filesystem operations return a `task_id` — poll with `getTask` until `status` is `completed`.
+Filesystem operations return a `task_id`; poll with `getTask` until `status` is `completed`.
 
 ```bash
-TOKEN=$(python3 scripts/alcf_token_manager.py get_access_token)
-
 # List directory:
 python3 scripts/iri_api_call.py call \
-  --base-url https://api.alcf.anl.gov \
+  --facility alcf \
   --operation-id ls \
   --path-param resource_id=6115bd2c-957a-4543-abff-5fae52992ff2 \
-  --query path=/home/shreyas/ \
-  --bearer-token "$TOKEN"
+  --query path=/home/username/ \
+  --ensure-token
 
 # Poll task result:
 python3 scripts/iri_api_call.py call \
-  --base-url https://api.alcf.anl.gov \
+  --facility alcf \
   --operation-id getTask \
   --path-param task_id=<task_id> \
-  --bearer-token "$TOKEN"
+  --ensure-token
 
 # View file:
 python3 scripts/iri_api_call.py call \
-  --base-url https://api.alcf.anl.gov \
+  --facility alcf \
   --operation-id view \
   --path-param resource_id=6115bd2c-957a-4543-abff-5fae52992ff2 \
-  --query path=/home/shreyas/file.txt \
-  --bearer-token "$TOKEN"
+  --query path=/home/username/file.txt \
+  --ensure-token
 ```

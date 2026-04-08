@@ -184,7 +184,7 @@ python3 scripts/iri_api_call.py call --operation-id getTask --path-param task_id
 
 **Never use shell variables (`$HOME`, `$SCRATCH`, `$USER`) in job or filesystem JSON bodies.** The IRI API passes these values as literal strings — they are not expanded by the shell or by Slurm. Use absolute paths instead.
 
-Perlmutter home directories follow the pattern `/global/homes/<first-letter>/<username>` (e.g. `/global/homes/s/shreyas`). Scratch is at `/pscratch/sd/<first-letter>/<username>`.
+Perlmutter home directories follow the pattern `/global/homes/<first-letter>/<username>` (for example `/global/homes/u/username`). Scratch is at `/pscratch/sd/<first-letter>/<username>`.
 
 Always substitute real paths before submitting. The example templates use `<first-letter>/<username>` placeholders — replace them with actual values.
 

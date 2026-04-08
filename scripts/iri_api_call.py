@@ -15,7 +15,27 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-DEFAULT_BASE_URL = "https://api.iri.nersc.gov"
+FACILITY_CONFIG = {
+    "nersc": {
+        "base_url": "https://api.iri.nersc.gov",
+        "openapi_url": "https://api.iri.nersc.gov/openapi.json",
+        "scope": (
+            "https://auth.globus.org/scopes/"
+            "ed3e577d-f7f3-4639-b96e-ff5a8445d699/iri_api"
+        ),
+        "label": "NERSC IRI API",
+    },
+    "alcf": {
+        "base_url": "https://api.alcf.anl.gov",
+        "openapi_url": "https://api.alcf.anl.gov/openapi.json",
+        "scope": (
+            "https://auth.globus.org/scopes/"
+            "6be511f6-a071-471f-9bc0-02a0d0836723/filesystem"
+        ),
+        "label": "ALCF IRI API",
+    },
+}
+DEFAULT_FACILITY = "nersc"
 
 
 class UsageError(Exception):
@@ -30,9 +50,30 @@ def default_token_file() -> Path:
     return Path.home() / ".globus" / "auth_tokens.json"
 
 
+def resolve_base_url(facility: str) -> str:
+    return FACILITY_CONFIG[facility]["base_url"]
+
+
+def resolve_openapi_url(facility: str) -> str:
+    return FACILITY_CONFIG[facility]["openapi_url"]
+
+
 def load_openapi(path: Path) -> Dict[str, Any]:
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def load_openapi_from_url(url: str, timeout: int) -> Dict[str, Any]:
+    request = urllib.request.Request(url, headers={"Accept": "application/json"}, method="GET")
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        body = response.read().decode("utf-8")
+    return json.loads(body)
+
+
+def load_selected_openapi(args: argparse.Namespace) -> Dict[str, Any]:
+    if args.openapi_url:
+        return load_openapi_from_url(args.openapi_url, args.timeout)
+    return load_openapi(args.openapi)
 
 
 def parse_kv(values: Optional[List[str]]) -> Dict[str, str]:
@@ -95,23 +136,24 @@ def parse_scope_string(scope_string: str) -> Set[str]:
     return set(scope_string.split()) if scope_string else set()
 
 
-def extract_iri_token(saved: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    iri_scope = (
-        "https://auth.globus.org/scopes/"
-        "ed3e577d-f7f3-4639-b96e-ff5a8445d699/iri_api"
-    )
+def extract_facility_token(saved: Dict[str, Any], facility: str) -> Optional[Dict[str, Any]]:
+    facility_scope = FACILITY_CONFIG[facility]["scope"]
     for token_data in saved.get("other_tokens", []):
-        if iri_scope in parse_scope_string(token_data.get("scope", "")):
+        if facility_scope in parse_scope_string(token_data.get("scope", "")):
             return token_data
     return None
 
 
-def ensure_access_token(token_file: Path, min_ttl: int, script_dir: Path) -> str:
+def ensure_access_token(
+    token_file: Path, min_ttl: int, script_dir: Path, facility: str
+) -> str:
     cmd = [
         sys.executable,
         str(script_dir / "token_manager.py"),
         "--token-file",
         str(token_file),
+        "--facilities",
+        facility,
         "ensure",
         "--min-ttl",
         str(min_ttl),
@@ -120,26 +162,26 @@ def ensure_access_token(token_file: Path, min_ttl: int, script_dir: Path) -> str
     ]
     proc = subprocess.run(cmd, check=True, capture_output=True, text=True)
     data = json.loads(proc.stdout)
-    token = data.get("access_token")
+    token = (data.get("access_tokens") or {}).get(facility)
     if not token:
-        raise UsageError("Token manager did not return an access token")
+        raise UsageError(f"Token manager did not return an access token for {facility}")
     return token
 
 
 def get_access_token(
-    token_file: Path, min_ttl: int, ensure_token: bool, script_dir: Path
+    token_file: Path, min_ttl: int, ensure_token: bool, script_dir: Path, facility: str
 ) -> str:
     saved = load_saved_token(token_file)
     if saved:
-        iri_token = extract_iri_token(saved)
-        expires_at = int((iri_token or {}).get("expires_at_seconds", 0) or 0)
+        facility_token = extract_facility_token(saved, facility)
+        expires_at = int((facility_token or {}).get("expires_at_seconds", 0) or 0)
         ttl = expires_at - int(time.time()) if expires_at else -1
-        token = (iri_token or {}).get("access_token")
+        token = (facility_token or {}).get("access_token")
         if token and ttl >= min_ttl:
             return token
 
     if ensure_token:
-        return ensure_access_token(token_file, min_ttl, script_dir)
+        return ensure_access_token(token_file, min_ttl, script_dir, facility)
 
     raise UsageError(
         "No usable access token found. Run token_manager.py ensure or pass --ensure-token."
@@ -167,7 +209,7 @@ def encode_multipart(field_name: str, file_path: Path) -> Tuple[bytes, str]:
 
 
 def call_api(args: argparse.Namespace) -> int:
-    spec = load_openapi(args.openapi)
+    spec = load_selected_openapi(args)
     method, openapi_path, operation = find_operation(
         spec, args.operation_id, args.method, args.path
     )
@@ -197,6 +239,7 @@ def call_api(args: argparse.Namespace) -> int:
                 min_ttl=args.min_ttl,
                 ensure_token=args.ensure_token,
                 script_dir=Path(__file__).resolve().parent,
+                facility=args.facility,
             )
         headers["Authorization"] = f"Bearer {token}"
 
@@ -255,7 +298,7 @@ def call_api(args: argparse.Namespace) -> int:
 
 
 def list_ops(args: argparse.Namespace) -> int:
-    spec = load_openapi(args.openapi)
+    spec = load_selected_openapi(args)
     rows = []  # type: List[Tuple[str, str, str, bool]]
     for api_path, methods in spec.get("paths", {}).items():
         for method_name, operation in methods.items():
@@ -290,10 +333,20 @@ def list_ops(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="IRI API helper for OpenAPI-based calls")
     parser.add_argument(
+        "--facility",
+        choices=sorted(FACILITY_CONFIG),
+        default=DEFAULT_FACILITY,
+        help="Target facility API (default: nersc)",
+    )
+    parser.add_argument(
         "--openapi",
         type=Path,
         default=default_openapi_path(),
-        help="Path to OpenAPI JSON",
+        help="Path to OpenAPI JSON (used when --openapi-url is not set)",
+    )
+    parser.add_argument(
+        "--openapi-url",
+        help="OpenAPI URL to fetch dynamically (defaults to the selected facility)",
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -306,7 +359,10 @@ def build_parser() -> argparse.ArgumentParser:
     call_parser.add_argument("--operation-id", help="OpenAPI operationId to call")
     call_parser.add_argument("--method", help="HTTP method (required with --path)")
     call_parser.add_argument("--path", help="OpenAPI path template (required with --method)")
-    call_parser.add_argument("--base-url", default=DEFAULT_BASE_URL, help="API base URL")
+    call_parser.add_argument(
+        "--base-url",
+        help="API base URL (defaults to the selected facility)",
+    )
     call_parser.add_argument(
         "--path-param",
         action="append",
@@ -338,7 +394,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     call_parser.add_argument(
         "--bearer-token",
-        help="Raw bearer token string (overrides --token-file; use with alcf_token_manager.py)",
+        help="Raw bearer token string (overrides --token-file)",
     )
     call_parser.add_argument(
         "--token-file",
@@ -381,6 +437,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
+    if args.openapi_url is None:
+        args.openapi_url = resolve_openapi_url(args.facility)
+    if getattr(args, "base_url", None) is None:
+        args.base_url = resolve_base_url(args.facility)
     try:
         return args.func(args)
     except UsageError as exc:
