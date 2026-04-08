@@ -18,7 +18,18 @@ Use scripted workflows. Prefer the bundled scripts over hand-written `curl` comm
 
 Use the unified token manager for both sites. By default it can manage both NERSC and ALCF tokens together, but when the user is focused on one site, scope it with `--facilities nersc` or `--facilities alcf`.
 
-All `iri_api_call.py` commands accept `--facility` to select the deployment, and also accept `--base-url` for manual override.
+`--facility` is a global flag on `iri_api_call.py` and must come before the subcommand:
+
+```bash
+# Correct
+python3 scripts/iri_api_call.py --facility nersc call --operation-id getProjects --ensure-token
+python3 scripts/iri_api_call.py --facility alcf call --operation-id launchJob ...
+
+# Wrong
+python3 scripts/iri_api_call.py call --facility nersc --operation-id getProjects
+```
+
+`--base-url` and `--openapi-url` follow the same rule: they are global flags and must also come before the subcommand.
 
 ## Token Management
 
