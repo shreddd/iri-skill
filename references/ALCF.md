@@ -47,6 +47,26 @@ Unlike NERSC (short names like `perlmutter`), ALCF uses UUIDs:
 | Home | `6115bd2c-957a-4543-abff-5fae52992ff2` | storage |
 | Eagle | `1c3ad9d4-2e91-42bc-becb-72b1fde1235c` | storage |
 
+These ALCF IDs are important enough to keep in the reference. In this environment, the ALCF OpenAPI URL returned `403`, so this table remains the primary quick reference instead of relying on live rediscovery every time.
+
+To refresh this list later, first try:
+
+```bash
+python3 scripts/iri_api_call.py --facility alcf call --operation-id getResources
+```
+
+If the ALCF OpenAPI URL is still blocked, fall back to the direct path form:
+
+```bash
+python3 scripts/iri_api_call.py \
+  --facility alcf \
+  --openapi references/openapi.json \
+  call \
+  --method GET \
+  --path /api/v1/status/resources \
+  --base-url https://api.alcf.anl.gov
+```
+
 ## Filesystem Paths
 
 **Never use shell variables** (`$HOME`, `$USER`) in job or filesystem JSON — the API passes them as literal strings.
@@ -168,3 +188,32 @@ python3 scripts/iri_api_call.py call \
   --query path=/home/username/file.txt \
   --ensure-token
 ```
+
+## OpenAPI Notes
+
+These details are worth keeping in the reference instead of re-reading `references/openapi.json` each time:
+
+- `launchJob` takes a `JobSpec` JSON body and a `resource_id` path parameter.
+- Common `JobSpec` fields are:
+  - `executable`
+  - `arguments`
+  - `directory`
+  - `stdout_path`
+  - `stderr_path`
+  - `launcher`
+  - `resources`
+  - `attributes`
+  - `pre_launch`
+  - `post_launch`
+- `resources` supports:
+  - `node_count`
+  - `process_count`
+  - `processes_per_node`
+  - `cpu_cores_per_process`
+  - `gpu_cores_per_process`
+  - `exclusive_node_use`
+  - `memory`
+- For ALCF queue selection, use `attributes.queue_name`.
+- For ALCF scheduler-specific extras such as filesystem declarations, use `attributes.custom_attributes`.
+- For multistep jobs or extra launch control, use `pre_launch` or `post_launch` and keep `#PBS` directives out of those scripts.
+- `getJob` returns useful scheduler metadata under `status.meta_data`, including fields like `partition`, `qos`, `stdoutPath`, `stderrPath`, `nodes`, and `jobExitCode`.

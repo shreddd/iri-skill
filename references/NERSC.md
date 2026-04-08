@@ -195,6 +195,64 @@ Perlmutter home directories follow the pattern `/global/homes/<first-letter>/<us
 
 Always substitute real paths before submitting. The example templates use `<first-letter>/<username>` placeholders — replace them with actual values.
 
+## Useful Resource IDs
+
+The NERSC `getResources` output is broad, but these are the IDs worth remembering for common work:
+
+| Name | Resource ID | Type | Notes |
+|---|---|---|---|
+| `perlmutter` compute via `launchJob` path param | `perlmutter` | compute alias | Use this string with compute job endpoints even though `getResources` also exposes UUID-backed compute entries |
+| `compute` | `94351904-6dba-4c16-b5cd-fbd280d8615b` | compute | General compute resource entry from `getResources` |
+| `login` | `e525a224-61c1-419f-9642-91168c792e39` | compute | Login nodes |
+| `homes` | `65b28619-c3b6-4942-8da1-044a3b3a2a9e` | storage | Global Homes |
+| `scratch` | `43d8f6c0-f900-48ce-b267-73714103f4ac` | storage | Scratch |
+| `cfs` | `59e80c79-4dfd-4c53-9c07-7405685fcd37` | storage | CFS |
+| `common` | `7e07a611-f927-4a39-a44d-b1d6e307accd` | storage | Global Common |
+| `archive` | `f4916c65-9001-49c2-b0bf-6fe4276b564c` | storage | HPSS Archive |
+| `regent` | `bc5ed17b-946e-432d-ae61-c4812a637868` | storage | Tape-oriented storage entry |
+| `jobs` | `3cf3c048-855e-4dd8-a189-065a483954bb` | service/unknown | Slurm commands wrapper resource |
+| `realtime` | `3776417d-747c-4753-895a-6323c17b9c98` | service/unknown | Urgent jobs wrapper resource |
+
+Notes:
+- For compute job submission, continue using `resource_id=perlmutter` as shown in the working examples.
+- For filesystem endpoints, prefer the short storage names documented earlier in this file: `homes`, `scratch`, `cfs`, and `common`.
+- The UUIDs above came from a live `getResources` query on April 8, 2026.
+
+To refresh this list later:
+
+```bash
+python3 scripts/iri_api_call.py --facility nersc call --operation-id getResources
+```
+
+## OpenAPI Notes
+
+These details are worth remembering from `references/openapi.json` so they do not need to be rediscovered each time:
+
+- `launchJob` takes a `JobSpec` JSON body and a `resource_id` path parameter.
+- Common `JobSpec` fields are:
+  - `executable`
+  - `arguments`
+  - `directory`
+  - `stdout_path`
+  - `stderr_path`
+  - `launcher`
+  - `resources`
+  - `attributes`
+  - `pre_launch`
+  - `post_launch`
+- `resources` supports:
+  - `node_count`
+  - `process_count`
+  - `processes_per_node`
+  - `cpu_cores_per_process`
+  - `gpu_cores_per_process`
+  - `exclusive_node_use`
+  - `memory`
+- For NERSC queue or QOS selection, use `attributes.queue_name`.
+- For NERSC scheduler-specific extras such as `constraint`, use `attributes.custom_attributes`.
+- For multistep jobs or extra launch control, use `pre_launch` or `post_launch` and keep `#SBATCH` directives out of those scripts.
+- `getJob` returns rich scheduler metadata under `status.meta_data`, including fields like `partition`, `qos`, `constraints`, `nodelist`, `stdoutPath`, and `stderrPath`.
+
 ## Reproducibility and Reference Refresh
 
 Regenerate endpoint reference after OpenAPI updates:
