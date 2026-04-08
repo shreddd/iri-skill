@@ -560,21 +560,21 @@ def build_parser() -> argparse.ArgumentParser:
         default=default_token_file(),
         help="Path to token JSON (default: ~/.globus/auth_tokens.json)",
     )
-    parser.add_argument(
-        "--facilities",
-        nargs="+",
-        choices=sorted(FACILITY_SCOPE_MAP),
-        default=list(DEFAULT_FACILITIES),
-        help=(
-            "Facility tokens to request and manage "
-            f"(default: {' '.join(DEFAULT_FACILITIES)})"
-        ),
-    )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     status_parser = subparsers.add_parser("status", help="Inspect token file state")
     status_parser.add_argument("--json", action="store_true", help="Emit JSON output")
+    status_parser.add_argument(
+        "--facilities",
+        nargs="+",
+        choices=sorted(FACILITY_SCOPE_MAP),
+        default=list(DEFAULT_FACILITIES),
+        help=(
+            "Facility tokens to inspect "
+            f"(default: {' '.join(DEFAULT_FACILITIES)})"
+        ),
+    )
     status_parser.set_defaults(func=cmd_status)
 
     ensure_parser = subparsers.add_parser(
@@ -622,6 +622,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--print-token",
         action="store_true",
         help="Include selected facility access tokens in output",
+    )
+    ensure_parser.add_argument(
+        "--facilities",
+        nargs="+",
+        choices=sorted(FACILITY_SCOPE_MAP),
+        default=list(DEFAULT_FACILITIES),
+        help=(
+            "Facility tokens to request and manage "
+            f"(default: {' '.join(DEFAULT_FACILITIES)})"
+        ),
     )
     ensure_parser.add_argument("--json", action="store_true", help="Emit JSON output")
     ensure_parser.set_defaults(func=cmd_ensure)
