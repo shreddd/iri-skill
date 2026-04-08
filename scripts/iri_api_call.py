@@ -187,14 +187,17 @@ def call_api(args: argparse.Namespace) -> int:
         or (args.auth_mode == "auto" and len(operation_security) > 0)
     )
 
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json", "User-Agent": "iri-api-client/1.0"}
     if needs_auth:
-        token = get_access_token(
-            token_file=args.token_file,
-            min_ttl=args.min_ttl,
-            ensure_token=args.ensure_token,
-            script_dir=Path(__file__).resolve().parent,
-        )
+        if args.bearer_token:
+            token = args.bearer_token
+        else:
+            token = get_access_token(
+                token_file=args.token_file,
+                min_ttl=args.min_ttl,
+                ensure_token=args.ensure_token,
+                script_dir=Path(__file__).resolve().parent,
+            )
         headers["Authorization"] = f"Bearer {token}"
 
     data = None  # type: Optional[bytes]
@@ -332,6 +335,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--ensure-token",
         action="store_true",
         help="Auto-refresh/login via token_manager.py if token is missing or stale",
+    )
+    call_parser.add_argument(
+        "--bearer-token",
+        help="Raw bearer token string (overrides --token-file; use with alcf_token_manager.py)",
     )
     call_parser.add_argument(
         "--token-file",

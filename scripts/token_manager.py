@@ -120,6 +120,7 @@ def validate_iri_token(iri_token_data: Dict[str, Any], validate_url: str) -> Any
         headers={
             "accept": "application/json",
             "Authorization": f"Bearer {iri_token_data['access_token']}",
+            "User-Agent": "iri-api-client/1.0",
         },
         method="GET",
     )
