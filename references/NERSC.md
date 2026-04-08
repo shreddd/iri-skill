@@ -117,6 +117,13 @@ python3 scripts/iri_api_call.py call \
   --ensure-token
 ```
 
+For NERSC jobs, put the queue or QOS selection in `attributes.queue_name`. Examples:
+- `debug`
+- `regular`
+- `express_amsc_g`
+
+Do not try to set NERSC QOS with `attributes.custom_attributes.qos`; the API path that worked in testing was `attributes.queue_name`.
+
 - Query one job:
 ```bash
 python3 scripts/iri_api_call.py call \
@@ -214,6 +221,18 @@ Use templates from `references/examples/`:
 - `filesystem-extract.json`
 - `filesystem-chmod.json`
 - `filesystem-chown.json`
+
+In `references/examples/compute-launch-job.json`, set the queue or QOS at:
+
+```json
+"attributes": {
+  "duration": 300,
+  "queue_name": "debug",
+  "account": "<replace-with-project-account>"
+}
+```
+
+Replace `"debug"` with the queue or QOS you need, such as `"express_amsc_g"`.
 
 Example calls using generated templates:
 
