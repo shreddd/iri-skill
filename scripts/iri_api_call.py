@@ -64,7 +64,7 @@ def load_openapi(path: Path) -> Dict[str, Any]:
 
 
 def load_openapi_from_url(url: str, timeout: int) -> Dict[str, Any]:
-    request = urllib.request.Request(url, headers={"Accept": "application/json"}, method="GET")
+    request = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "iri-api-client/1.0"}, method="GET")
     with urllib.request.urlopen(request, timeout=timeout) as response:
         body = response.read().decode("utf-8")
     return json.loads(body)
@@ -72,7 +72,7 @@ def load_openapi_from_url(url: str, timeout: int) -> Dict[str, Any]:
 
 def load_selected_openapi(args: argparse.Namespace) -> Dict[str, Any]:
     if args.openapi_url:
-        return load_openapi_from_url(args.openapi_url, args.timeout)
+        return load_openapi_from_url(args.openapi_url, getattr(args, "timeout", 30))
     return load_openapi(args.openapi)
 
 
